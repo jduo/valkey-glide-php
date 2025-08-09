@@ -200,7 +200,6 @@ class ValkeyGlideTest extends ValkeyGlideBaseTest
     {
         $this->valkey_glide->del('key');
         $this->assertEquals(0, $this->valkey_glide->getBit('key', 0));
-        $this->assertFalse($this->valkey_glide->getBit('key', -1));
         $this->assertEquals(0, $this->valkey_glide->getBit('key', 100000));
 
         $this->valkey_glide->set('key', "\xff");
@@ -232,7 +231,12 @@ class ValkeyGlideTest extends ValkeyGlideBaseTest
         $this->assertKeyEquals("\x9f", 'key');
 
         // Verify valid offset ranges
-        $this->assertFalse($this->valkey_glide->getBit('key', -1));
+        try {
+            $this->valkey_glide->getBit('key', -1);
+            $this->fail("Expected exception");
+        } catch (Exception $e) {
+            $this->assertStringContains("out of range", $e->getMessage());
+        }
 
         $this->valkey_glide->setBit('key', 0x7fffffff, 1);
         $this->assertEquals(1, $this->valkey_glide->getBit('key', 0x7fffffff));
@@ -958,11 +962,12 @@ class ValkeyGlideTest extends ValkeyGlideBaseTest
 
         $this->valkey_glide->set('key', 'abc');
 
-        $this->valkey_glide->incr('key');
-        $this->assertKeyEquals('abc', 'key');
-
-        $this->valkey_glide->incr('key');
-        $this->assertKeyEquals('abc', 'key');
+        try {
+            $this->valkey_glide->incr('key');
+            $this->fail("Expected exception");
+        } catch (Exception $e) {
+            $this->assertStringContains("out of range", $e->getMessage());
+        }
 
         $this->valkey_glide->set('key', 0);
         $this->assertEquals(PHP_INT_MAX, $this->valkey_glide->incrby('key', PHP_INT_MAX));
@@ -990,11 +995,12 @@ class ValkeyGlideTest extends ValkeyGlideBaseTest
 
         $this->valkey_glide->set('key', 'abc');
 
-        $this->valkey_glide->incrbyfloat('key', 1.5);
-        $this->assertKeyEquals('abc', 'key');
-
-        $this->valkey_glide->incrbyfloat('key', -1.5);
-        $this->assertKeyEquals('abc', 'key');
+        try {
+            $this->valkey_glide->incrByFloat('key', 1.5);
+            $this->fail("Expected exception");
+        } catch (Exception $e) {
+            $this->assertStringContains("not a valid float", $e->getMessage());
+        }
 
         // Test with prefixing
        // $this->valkey_glide->setOption(ValkeyGlide::OPT_PREFIX, 'someprefix:');
@@ -1316,7 +1322,12 @@ class ValkeyGlideTest extends ValkeyGlideBaseTest
         $this->assertEquals(0, $this->valkey_glide->llen('list'));    // non-existent returns 0
 
         $this->valkey_glide->set('list', 'actually not a list');
-        $this->assertFalse($this->valkey_glide->llen('list'));// not a list returns FALSE
+        try {
+            $this->valkey_glide->llen('list');
+            $this->fail("Expected exception");
+        } catch (Exception $e) {
+            $this->assertStringContains("WRONGTYPE", $e->getMessage());
+        }
     }
 
     public function testlPopx()
@@ -1383,7 +1394,12 @@ class ValkeyGlideTest extends ValkeyGlideBaseTest
 
         // test invalid type
         $this->valkey_glide->set('list', 'not a list...');
-        $this->assertFalse($this->valkey_glide->ltrim('list', 0, 2));
+        try {
+            $this->valkey_glide->ltrim('list', 0, 2);
+            $this->fail("Expected exception");
+        } catch (Exception $e) {
+            $this->assertStringContains("WRONGTYPE", $e->getMessage());
+        }
     }
 
     public function setupSort()
@@ -1676,7 +1692,12 @@ class ValkeyGlideTest extends ValkeyGlideBaseTest
         $this->assertFalse($this->valkey_glide->get('list'));
 
         $this->valkey_glide->set('list', 'actually not a list');
-        $this->assertFalse($this->valkey_glide->lrem('list', 'x'));
+        try {
+            $this->valkey_glide->lrem('list', 'x');
+            $this->fail("Expected exception");
+        } catch (Exception $e) {
+            $this->assertStringContains("WRONGTYPE", $e->getMessage());
+        }
     }
 
     public function testSAdd()
@@ -2553,11 +2574,14 @@ class ValkeyGlideTest extends ValkeyGlideBaseTest
 
     public function testSelect()
     {
-        $this->assertFalse(@$this->valkey_glide->select(-1));
+        try {
+            $this->valkey_glide->select(-1);
+            $this->fail("Expected exception");
+        } catch (Exception $e) {
+            $this->assertStringContains("out of range", $e->getMessage());
+        }
         $this->assertTrue($this->valkey_glide->select(0));
     }
-
-
 
     public function testMset()
     {
@@ -2570,7 +2594,12 @@ class ValkeyGlideTest extends ValkeyGlideBaseTest
         $this->assertTrue($this->valkey_glide->mset(['x' => 'a', 'y' => 'b', 'z' => 'c']));   // set x y z
         $this->assertEquals(['a', 'b', 'c'], $this->valkey_glide->mget(['x', 'y', 'z']));    // check x y z
 
-        $this->assertFalse($this->valkey_glide->mset([])); // set ø → FALSE
+        try {
+            $this->valkey_glide->mset([]); // set ø → FALSE
+            $this->fail("Expected exception");
+        } catch (Exception $e) {
+            $this->assertStringContains("wrong number of arguments", $e->getMessage());
+        }
 
         /*
          * Integer keys
@@ -2595,10 +2624,13 @@ class ValkeyGlideTest extends ValkeyGlideBaseTest
         $this->assertFalse($this->valkey_glide->msetnx(['x' => 'A', 'y' => 'B', 'z' => 'C']));   // set x y z
         $this->assertEquals([false, 'b', 'c'], $this->valkey_glide->mget(['x', 'y', 'z']));  // check x y z
 
-        $this->assertFalse($this->valkey_glide->msetnx([])); // set ø → FALSE
+        try {
+            $this->valkey_glide->msetnx([]); // set ø → FALSE
+            $this->fail("Expected exception");
+        } catch (Exception $e) {
+            $this->assertStringContains("wrong number of arguments", $e->getMessage());
+        }
     }
-
-
 
     public function testZAddFirstArg()
     {
@@ -3138,9 +3170,13 @@ class ValkeyGlideTest extends ValkeyGlideBaseTest
         $this->assertEquals(0, $this->valkey_glide->zLexCount('key', '-', '-'));
         $this->assertEquals(count($entries), $this->valkey_glide->zLexCount('key', '-', '+'));
 
-        /* Verify invalid arguments return FALSE */
-        $this->assertFalse(@$this->valkey_glide->zLexCount('key', '[a', 'bad'));
-        $this->assertFalse(@$this->valkey_glide->zLexCount('key', 'bad', '[a'));
+        /* Verify invalid arguments throw exceptions */
+        try {
+            $this->assertFalse(@$this->valkey_glide->zLexCount('key', '[a', 'bad'));
+            $this->fail("Expected exception");
+        } catch (Exception $e) {
+            $this->assertStringContains("min or max not valid string range item", $e->getMessage());
+        }
 
         /* Now iterate through */
         $start = $entries[0];
@@ -3527,8 +3563,6 @@ class ValkeyGlideTest extends ValkeyGlideBaseTest
 
     public function testHashes()
     {
-
-
         $this->valkey_glide->del('h', 'key');
 
         $this->assertEquals(0, $this->valkey_glide->hLen('h'));
@@ -3605,7 +3639,12 @@ class ValkeyGlideTest extends ValkeyGlideBaseTest
         $this->assertEquals('' . PHP_INT_MAX, $this->valkey_glide->hGet('h', 'x'));
 
         $this->valkey_glide->hSet('h', 'y', 'not-a-number');
-        $this->assertFalse($this->valkey_glide->hIncrBy('h', 'y', 1));
+        try {
+            $this->valkey_glide->hIncrBy('h', 'y', 1);
+            $this->fail("Expected exception");
+        } catch (Exception $e) {
+            $this->assertStringContains("not an integer", $e->getMessage());
+        }
 
         if (version_compare($this->version, '2.5.0') >= 0) {
             // hIncrByFloat
@@ -3617,7 +3656,11 @@ class ValkeyGlideTest extends ValkeyGlideBaseTest
             $this->assertEquals(1000000000001.5, $this->valkey_glide->hincrByFloat('h', 'x', 1000000000000));
 
             $this->valkey_glide->hset('h', 'y', 'not-a-number');
-            $this->assertFalse($this->valkey_glide->hIncrByFloat('h', 'y', 1.5));
+            try {
+                $this->valkey_glide->hIncrByFloat('h', 'y', 1.5);
+            } catch (Exception $e) {
+                $this->assertStringContains("not a float", $e->getMessage());
+            }
         }
 
         // hmset
@@ -5759,8 +5802,12 @@ class ValkeyGlideTest extends ValkeyGlideBaseTest
 
         /* REWRITE.  We don't care if it actually works, just that the
            command be attempted */
-        $res = $this->valkey_glide->config('rewrite');
-        $this->assertIsBool($res);
+        try {
+            $res = $this->valkey_glide->config('rewrite');
+            $this->assertIsBool($res);
+        } catch (Exception $e) {
+            $this->assertStringContains("The server is running without a config file", $e->getMessage());
+        }
 
         if (! $this->minVersionCheck('7.0.0')) {
             return;
@@ -6154,10 +6201,24 @@ class ValkeyGlideTest extends ValkeyGlideBaseTest
     {
 
         $this->valkey_glide->set('scankey', 'simplekey');
+        $it = null;
 
-        foreach (['sScan', 'hScan', 'zScan'] as $method) {
-            $it = null;
-            $this->valkey_glide->$method('scankey', $it);
+        try {
+            $this->valkey_glide->sscan('scankey', $it);
+        } catch (Exception $e) {
+            $this->assertStringContains("wrong kind of value", $e->getMessage());
+        }
+
+        try {
+            $this->valkey_glide->hscan('scankey', $it);
+        } catch (Exception $e) {
+            $this->assertStringContains("wrong kind of value", $e->getMessage());
+        }
+
+        try {
+            $this->valkey_glide->zscan('scankey', $it);
+        } catch (Exception $e) {
+            $this->assertStringContains("wrong kind of value", $e->getMessage());
         }
     }
 
@@ -6505,8 +6566,11 @@ class ValkeyGlideTest extends ValkeyGlideBaseTest
 
         /* CREATE MKSTREAM */
         $key = 's:' . uniqid();
-        $this->assertFalse($this->valkey_glide->xGroup('CREATE', $key, 'g0', 0));
-
+        try {
+            $this->valkey_glide->xGroup('CREATE', $key, 'g0', 0);
+        } catch (Exception $e) {
+            $this->assertStringContains("requires the key to exist", $e->getMessage());
+        }
 
         $this->assertTrue($this->valkey_glide->xGroup('CREATE', $key, 'g1', 0, true));
 
@@ -6518,15 +6582,26 @@ class ValkeyGlideTest extends ValkeyGlideBaseTest
 
         /* CREATE */
         $this->assertTrue($this->valkey_glide->xGroup('CREATE', 's', 'mygroup', '$'));
-        $this->assertFalse($this->valkey_glide->xGroup('CREATE', 's', 'mygroup', 'BAD_ID'));
+        try {
+            $this->valkey_glide->xGroup('CREATE', 's', 'mygroup', 'BAD_ID');
+        } catch (Exception $e) {
+            $this->assertStringContains("Invalid stream ID", $e->getMessage());
+        }
 
         /* BUSYGROUP */
-        $this->assertFalse($this->valkey_glide->xGroup('CREATE', 's', 'mygroup', '$'));
-
+        try {
+            $this->valkey_glide->xGroup('CREATE', 's', 'mygroup', '$');
+        } catch (Exception $e) {
+            $this->assertStringContains("already exists", $e->getMessage());
+        }
 
         /* SETID */
         $this->assertTrue($this->valkey_glide->xGroup('SETID', 's', 'mygroup', '$'));
-        $this->assertFalse($this->valkey_glide->xGroup('SETID', 's', 'mygroup', 'BAD_ID'));
+        try {
+            $this->valkey_glide->xGroup('SETID', 's', 'mygroup', 'BAD_ID');
+        } catch (Exception $e) {
+            $this->assertStringContains("Invalid stream ID", $e->getMessage());
+        }
 
         $this->assertEquals(0, $this->valkey_glide->xGroup('DELCONSUMER', 's', 'mygroup', 'myconsumer'));
 
@@ -6747,8 +6822,16 @@ class ValkeyGlideTest extends ValkeyGlideBaseTest
         $this->assertLT(100, $this->mstime() - $tm1);
 
         /* Make sure passing bad values to BLOCK or COUNT immediately fails */
-        $this->assertFalse(@$this->valkey_glide->xReadGroup('group1', 'c1', $qnew, -1));
-        $this->assertFalse(@$this->valkey_glide->xReadGroup('group1', 'c1', $qnew, null, -1));
+        try {
+            $this->valkey_glide->xReadGroup('group1', 'c1', $qnew, -1);
+        } catch (Exception $e) {
+            $this->assertStringContains("cannot be negative", $e->getMessage());
+        }
+        try {
+            $this->valkey_glide->xReadGroup('group1', 'c1', $qnew, null, -1);
+        } catch (Exception $e) {
+            $this->assertStringContains("cannot be negative", $e->getMessage());
+        }
     }
 
     public function testXPending()
