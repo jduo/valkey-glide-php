@@ -189,9 +189,12 @@ class ValkeyGlideTest extends ValkeyGlideBaseTest
         // Regression test for GitHub issue #2210
         $this->assertEquals(6, $this->valkey_glide->bitop('AND', '{key}1', '{key}2'));
 
-        // Make sure ValkeyGlideCluster doesn't even send the command.  We don't care
-        // about what ValkeyGlide returns
-        @$this->valkey_glide->bitop('AND', 'key1', 'key2', 'key3');
+        // Make sure ValkeyGlideCluster doesn't even send the command and reports a useful error.
+        try {
+            $this->valkey_glide->bitop('AND', 'key1', 'key2', 'key3');
+        } catch (Exception $e) {
+            $this->assertStringContains("CrossSlot", $e->getMessage());
+        }
 
         $this->valkey_glide->del('{key}1', '{key}2');
     }
